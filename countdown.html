@@ -1,0 +1,436 @@
+ <!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Countdown Timer</title>
+<style>
+  :root{
+    --bg:#0f1724;
+    --card:#0b1220;
+    --accent:#6ee7b7;
+    --muted:#9aa6b2;
+    --danger:#ff6b6b;
+    --glass: rgba(255,255,255,0.03);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:
+      linear-gradient(180deg, rgba(10,14,20,1) 0%, rgba(6,10,16,1) 100%);
+    color:#e6eef3;
+    padding:24px;
+  }
+
+  .card{
+    width:100%;
+    max-width:760px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:12px;
+    padding:20px;
+    box-shadow: 0 10px 30px rgba(2,6,12,0.6);
+    border: 1px solid rgba(255,255,255,0.03);
+  }
+  h1{
+    margin:0 0 8px 0;
+    font-size:1.2rem;
+    letter-spacing:0.4px;
+  }
+  p.lead{margin:0 0 18px 0;color:var(--muted);font-size:0.95rem}
+
+  .controls{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:16px;
+  }
+  input[type="datetime-local"]{
+    padding:10px 12px;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,0.04);
+    background:var(--glass);
+    color:inherit;
+    min-width:220px;
+  }
+  button{
+    padding:9px 12px;
+    border-radius:8px;
+    border:0;
+    cursor:pointer;
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    color:inherit;
+    font-weight:600;
+  }
+  button.primary{
+    background:linear-gradient(90deg,var(--accent), #4fd0a5);
+    color:#052018;
+    box-shadow:0 6px 18px rgba(34,197,94,0.12);
+  }
+  button.ghost{
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.04);
+  }
+  .presets{display:flex; gap:6px; flex-wrap:wrap}
+  .timer{
+    margin-top:10px;
+    display:flex;
+    gap:12px;
+    justify-content:center;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .segment{
+    min-width:110px;
+    background:rgba(255,255,255,0.02);
+    padding:14px 16px;
+    border-radius:10px;
+    text-align:center;
+    border:1px solid rgba(255,255,255,0.03);
+  }
+  .value{
+    font-size:2.1rem;
+    font-weight:700;
+    line-height:1;
+  }
+  .label{font-size:0.8rem;color:var(--muted);margin-top:6px}
+  .status{margin-top:12px;color:var(--muted);font-size:0.95rem;text-align:center}
+  .end-state{
+    margin-top:12px;
+    padding:10px;
+    border-radius:8px;
+    background:rgba(255,255,255,0.02);
+    text-align:center;
+  }
+  .flash{
+    animation:flash 1s linear infinite;
+  }
+  @keyframes flash{
+    0%{box-shadow:0 0 0 rgba(255,107,107,0.0)}
+    50%{box-shadow:0 6px 26px rgba(255,107,107,0.14)}
+    100%{box-shadow:0 0 0 rgba(255,107,107,0.0)}
+  }
+
+  /* responsive */
+  @media (max-width:520px){
+    .segment{min-width:80px;padding:10px}
+    .value{font-size:1.6rem}
+  }
+</style>
+</head>
+<body>
+  <main class="card" role="application" aria-labelledby="title">
+    <h1 id="title">Countdown Timer</h1>
+    <p class="lead">Choose a target date/time, then Start. When the countdown reaches zero it will alert and show the finished state.</p>
+
+    <div class="controls" aria-hidden="false">
+      <label for="target" class="sr-only" style="display:none">Target date and time</label>
+      <input id="target" type="datetime-local" />
+      <button id="startBtn" class="primary">Start</button>
+      <button id="pauseBtn" class="ghost" disabled>Pause</button>
+      <button id="resetBtn" class="ghost" disabled>Reset</button>
+      <div style="flex:1"></div>
+    </div>
+
+    <div class="presets" style="margin-bottom:12px">
+      <button data-preset="PT1M" class="ghost">1 min</button>
+      <button data-preset="PT5M" class="ghost">5 min</button>
+      <button data-preset="PT1H" class="ghost">1 hour</button>
+      <button data-preset="TOMORROW" class="ghost">Tomorrow 09:00</button>
+    </div>
+
+    <section class="timer" aria-live="polite" aria-atomic="true" id="display">
+      <div class="segment" id="seg-days">
+        <div class="value" id="days">0</div>
+        <div class="label">Days</div>
+      </div>
+      <div class="segment" id="seg-hours">
+        <div class="value" id="hours">00</div>
+        <div class="label">Hours</div>
+      </div>
+      <div class="segment" id="seg-mins">
+        <div class="value" id="minutes">00</div>
+        <div class="label">Minutes</div>
+      </div>
+      <div class="segment" id="seg-secs">
+        <div class="value" id="seconds">00</div>
+        <div class="label">Seconds</div>
+      </div>
+    </section>
+
+    <div class="status" id="status">No timer running.</div>
+
+    <div class="end-state" id="endState" style="display:none" role="status" aria-live="polite">
+      <strong id="endTitle">Time's up!</strong>
+      <div id="endMsg" style="margin-top:6px;color:var(--muted)">The countdown reached the target time.</div>
+    </div>
+  </main>
+
+<script>
+/*
+  Countdown Timer
+  - Uses Date objects and setInterval for updates
+  - Persist target in localStorage under "countdown_target_iso"
+  - Accessibility: display updates in aria-live region
+*/
+
+(function(){
+  const $ = sel => document.querySelector(sel);
+  const startBtn = $('#startBtn');
+  const pauseBtn = $('#pauseBtn');
+  const resetBtn = $('#resetBtn');
+  const targetInput = $('#target');
+  const status = $('#status');
+  const endState = $('#endState');
+  const endTitle = $('#endTitle');
+  const endMsg = $('#endMsg');
+
+  const daysEl = $('#days');
+  const hoursEl = $('#hours');
+  const minutesEl = $('#minutes');
+  const secondsEl = $('#seconds');
+
+  // timer state
+  let targetTime = null; // Date instance (UTC)
+  let remainingBeforePause = null; // milliseconds
+  let intervalId = null;
+  let running = false;
+
+  // Load last saved target (if any)
+  try {
+    const saved = localStorage.getItem('countdown_target_iso');
+    if (saved) {
+      // we keep the input value local and show it, but we do not auto-start
+      targetInput.value = isoToDateTimeLocal(saved);
+    }
+  } catch(e){ /* ignore storage errors */ }
+
+  // Bind buttons
+  startBtn.addEventListener('click', startHandler);
+  pauseBtn.addEventListener('click', pauseHandler);
+  resetBtn.addEventListener('click', resetHandler);
+
+  // Presets
+  document.querySelectorAll('[data-preset]').forEach(btn=>{
+    btn.addEventListener('click', ()=> {
+      const p = btn.dataset.preset;
+      if (p === 'TOMORROW') {
+        const t = new Date();
+        t.setDate(t.getDate() + 1);
+        t.setHours(9,0,0,0);
+        targetInput.value = dateToDateTimeLocal(t);
+      } else {
+        // ISO 8601 duration like PT5M, PT1H etc.
+        const now = new Date();
+        let dt = new Date(now.getTime());
+        if (p === 'PT1M') dt = new Date(now.getTime() + 1*60*1000);
+        if (p === 'PT5M') dt = new Date(now.getTime() + 5*60*1000);
+        if (p === 'PT1H') dt = new Date(now.getTime() + 60*60*1000);
+        targetInput.value = dateToDateTimeLocal(dt);
+      }
+      // assist the user to start
+      targetInput.focus();
+    });
+  });
+
+  // Keyboard: Enter to start when input focused
+  targetInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') startHandler();
+  });
+
+  // Core actions
+  function startHandler(){
+    // if currently paused with remainingBeforePause, resume to new target relative to now
+    const inputVal = targetInput.value;
+    if (!inputVal && !remainingBeforePause) {
+      status.textContent = 'Please pick a target date & time first.';
+      return;
+    }
+
+    if (running) return;
+
+    if (remainingBeforePause != null && !inputVal) {
+      // resume using remainingBeforePause
+      targetTime = new Date(Date.now() + remainingBeforePause);
+      remainingBeforePause = null;
+    } else {
+      // parse input value -> treat as local datetime
+      const d = dateTimeLocalToDate(inputVal);
+      if (!d || isNaN(d.getTime())) {
+        status.textContent = 'Invalid date/time. Please enter a valid target.';
+        return;
+      }
+      if (d.getTime() <= Date.now()) {
+        status.textContent = 'Target must be in the future.';
+        return;
+      }
+      targetTime = d;
+      // persist ISO string
+      try { localStorage.setItem('countdown_target_iso', targetTime.toISOString()); } catch(e){}
+    }
+
+    running = true;
+    endState.style.display = 'none';
+    startBtn.disabled = true;
+    pauseBtn.disabled = false;
+    resetBtn.disabled = false;
+    status.textContent = 'Timer running.';
+
+    // update immediately and then every 250ms (smooth enough)
+    update();
+    intervalId = setInterval(update, 250);
+  }
+
+  function pauseHandler(){
+    if (!running) return;
+    // compute remaining and stop
+    const rem = Math.max(0, targetTime.getTime() - Date.now());
+    remainingBeforePause = rem;
+    stopInterval();
+    running = false;
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    status.textContent = 'Paused.';
+  }
+
+  function resetHandler(){
+    stopInterval();
+    running = false;
+    remainingBeforePause = null;
+    targetTime = null;
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    resetBtn.disabled = true;
+    // clear display & localStorage
+    daysEl.textContent = '0';
+    hoursEl.textContent = '00';
+    minutesEl.textContent = '00';
+    secondsEl.textContent = '00';
+    status.textContent = 'No timer running.';
+    endState.style.display = 'none';
+    try { localStorage.removeItem('countdown_target_iso'); } catch(e){}
+  }
+
+  function stopInterval(){
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+  }
+
+  function update(){
+    if (!targetTime) return;
+    const now = Date.now();
+    const diff = targetTime.getTime() - now;
+    if (diff <= 0) {
+      // reached zero
+      stopInterval();
+      running = false;
+      startBtn.disabled = false;
+      pauseBtn.disabled = true;
+      resetBtn.disabled = false;
+      showEndState();
+      try { localStorage.removeItem('countdown_target_iso'); } catch(e){}
+      return;
+    }
+    const parts = msToParts(diff);
+    daysEl.textContent = parts.days;
+    hoursEl.textContent = pad(parts.hours);
+    minutesEl.textContent = pad(parts.minutes);
+    secondsEl.textContent = pad(parts.seconds);
+
+    status.textContent = `Time remaining — ${parts.days}d ${pad(parts.hours)}h ${pad(parts.minutes)}m ${pad(parts.seconds)}s`;
+  }
+
+  function showEndState(){
+    // visually indicate finished
+    endState.style.display = 'block';
+    endState.classList.add('flash');
+    endTitle.textContent = "⏰ Time's up!";
+    endMsg.textContent = `Target reached at ${new Date().toLocaleString()}.`;
+    status.textContent = "Finished.";
+    // small audible cue (optional, won't play without user gesture on some browsers)
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.value = 880;
+      g.gain.value = 0.02;
+      o.connect(g); g.connect(ctx.destination);
+      o.start();
+      setTimeout(()=>{ o.stop(); ctx.close(); }, 220);
+    } catch(e){
+      // audio may be blocked or unsupported — ignore
+    }
+  }
+
+  // Helpers
+  function msToParts(ms){
+    const totalSec = Math.floor(ms/1000);
+    const seconds = totalSec % 60;
+    const totalMin = Math.floor(totalSec/60);
+    const minutes = totalMin % 60;
+    const totalHour = Math.floor(totalMin/60);
+    const hours = totalHour % 24;
+    const days = Math.floor(totalHour/24);
+    return {days, hours, minutes, seconds};
+  }
+  function pad(n){ return String(n).padStart(2,'0'); }
+
+  // Convert <input type=datetime-local> value (local time string) into a Date object (local)
+  function dateTimeLocalToDate(val){
+    if (!val) return null;
+    // value format: 'YYYY-MM-DDTHH:MM' or with seconds: 'YYYY-MM-DDTHH:MM:SS'
+    // Create as local by replacing 'T' with ' ' and using new Date(...) can behave inconsistently,
+    // so parse components explicitly to avoid ambiguity.
+    const parts = val.split('T');
+    if (parts.length < 2) return null;
+    const [y,m,d] = parts[0].split('-').map(Number);
+    const timeParts = parts[1].split(':').map(Number);
+    const hh = timeParts[0] || 0;
+    const mm = timeParts[1] || 0;
+    const ss = timeParts[2] || 0;
+    return new Date(y, (m-1), d, hh, mm, ss, 0); // local timezone
+  }
+
+  // Format Date -> datetime-local string
+  function dateToDateTimeLocal(d){
+    if (!d) return '';
+    const YYYY = d.getFullYear();
+    const MM = String(d.getMonth()+1).padStart(2,'0');
+    const DD = String(d.getDate()).padStart(2,'0');
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    const ss = String(d.getSeconds()).padStart(2,'0');
+    return `${YYYY}-${MM}-${DD}T${hh}:${mm}:${ss}`;
+  }
+
+  // Convert ISO (UTC) to local datetime-local string for input
+  function isoToDateTimeLocal(iso){
+    try{
+      const d = new Date(iso);
+      return dateToDateTimeLocal(d);
+    } catch(e){
+      return '';
+    }
+  }
+
+  // On page unload, save active target if running
+  window.addEventListener('beforeunload', ()=>{
+    if (running && targetTime) {
+      try { localStorage.setItem('countdown_target_iso', targetTime.toISOString()); } catch(e){}
+    }
+  });
+
+  // Accessibility: expose role and instructions via status initially
+  status.textContent = 'No timer running. Set a target and click Start.';
+
+})();
+</script>
+</body>
+</html>
